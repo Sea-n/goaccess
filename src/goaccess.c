@@ -786,7 +786,7 @@ parse_tail_follow (GLog *glog, FILE *fp) {
     logitem = parse_line (glog, buf, 0);
     if (logitem != NULL) {
       if (logitem->errstr == NULL)
-        process_log (logitem);
+        process_log (logitem, NULL);
       count_process (glog);
       free_glog (logitem);
     }

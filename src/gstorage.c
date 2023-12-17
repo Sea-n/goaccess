@@ -1507,14 +1507,22 @@ clean_old_data_by_date (uint32_t numdate) {
   return 0;
 }
 
+/* Get ns */
+#define SeanTime(name) do { \
+  struct timespec ts; \
+  clock_gettime(CLOCK_MONOTONIC, &ts); \
+  name = ((uint64_t) ts.tv_sec) * 1000 * 1000 * 1000 + (uint64_t) ts.tv_nsec; \
+} while (0)
+
 /* Process a log line and set the data into the corresponding data
  * structure. */
 void
-process_log (GLogItem *logitem) {
+process_log (GLogItem *logitem, long long *tps) {
   GModule module;
   const GParse *parse = NULL;
   size_t idx = 0;
   uint32_t numdate = logitem->numdate;
+  long long t0, t1, t2, t3;
 
   if (conf.keep_last > 0 && clean_old_data_by_date (numdate) == -1)
     return;
@@ -1535,12 +1543,18 @@ process_log (GLogItem *logitem) {
   if (conf.list_agents)
     ins_agent_key_val (logitem, numdate);
 
+  SeanTime(t0);
   FOREACH_MODULE (idx, module_list) {
     module = module_list[idx];
     if (!(parse = panel_lookup (module)))
       continue;
+    SeanTime(t1);
     map_log (logitem, parse, module);
+    SeanTime(t2);
+    tps[idx] += (t2 - t1);
   }
+  SeanTime(t3);
+  tps[19] += (t3 - t0);
 
   count_bw (numdate, logitem->resp_size);
   /* don't ignore line but neither count as valid */

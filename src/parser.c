@@ -2004,6 +2004,15 @@ fgetline (FILE *fp) {
   return NULL;
 }
 
+long long tps[20] = {0};
+
+/* Get ns */
+#define SeanTime(name) do { \
+  struct timespec ts; \
+  clock_gettime(CLOCK_MONOTONIC, &ts); \
+  name = ((uint64_t) ts.tv_sec) * 1000 * 1000 * 1000 + (uint64_t) ts.tv_nsec; \
+} while (0)
+
 /* Parse chunk of lines to logitems */
 void *
 read_lines_thread (void *arg) {
@@ -2025,7 +2034,7 @@ process_lines_thread (void *arg) {
     if (job->logitems[i] == NULL)
       break;
     if (!job->dry_run && job->logitems[i]->errstr == NULL)
-      process_log (job->logitems[i]);
+      process_log (job->logitems[i], tps);
     count_process (job->glog);
     free_glog (job->logitems[i]);
   }
@@ -2044,6 +2053,7 @@ read_lines (FILE *fp, GLog *glog, int dry_run) {
   void *status;
   GJob jobs[2][conf.jobs];
   pthread_t threads[conf.jobs];
+  long long t0, t1, t2, t3, t1s=0, t2s=0, t3s=0;
 
 #ifndef WITH_GETLINE
   char *s = NULL;
@@ -2070,6 +2080,7 @@ read_lines (FILE *fp, GLog *glog, int dry_run) {
 
   b = 0;
   while (!feof (fp)) {  // b = 0 or 1
+    SeanTime(t0);
     for (k = 1; k < conf.jobs || (conf.jobs == 1 && k == 1); k++) {
 #ifdef WITH_GETLINE
       while ((jobs[b][k].lines[jobs[b][k].p] = fgetline (fp)) != NULL) {
@@ -2092,6 +2103,8 @@ read_lines (FILE *fp, GLog *glog, int dry_run) {
         pthread_create(&threads[k], NULL, read_lines_thread, (void *) &jobs[b][k]);
       }
     }
+    SeanTime(t1);
+    t1s += t1 - t0;
 
     /* flip from block A/B to B/A */
     if (conf.jobs > 1)
@@ -2108,6 +2121,9 @@ read_lines (FILE *fp, GLog *glog, int dry_run) {
     /* flip from block B/A to A/B */
     if (conf.jobs > 1)
       b = b ^ 1;
+
+    SeanTime(t2);
+    t2s += t2 - t1;
 
     for (k = 1; k < conf.jobs; k++) {
       if (jobs[b][k].running) {
@@ -2126,7 +2142,16 @@ read_lines (FILE *fp, GLog *glog, int dry_run) {
     /* flip from block A/B to B/A */
     if (conf.jobs > 1)
       b = b ^ 1;
+
+    SeanTime(t3);
+    t3s += t3 - t2;
   }  // while (!eof)
+  printf("\nchk=%d, jobs=%d:  readline=%lld,  proc=%lld,  parse=%lld,  tps=%lld\n", CHUNK_SIZE, conf.jobs, t1s/1000/1000, t2s/1000/1000, t3s/1000/1000, tps[19]/1000/1000);
+
+  for (int i=0; i<20; i++)
+    if (tps[i] * 20 > tps[19])
+      printf("[%d] => %lld\n", i, tps[i]/1000/1000);
+  printf("\n");
 
   /* After eof, process last data */
   for (b = 0; b < 2; b++) {
