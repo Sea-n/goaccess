@@ -1522,7 +1522,7 @@ process_log (GLogItem *logitem, long long *tps) {
   const GParse *parse = NULL;
   size_t idx = 0;
   uint32_t numdate = logitem->numdate;
-  long long t0, t1, t2, t3;
+//  long long t0, t1, t2, t3;
 
   if (conf.keep_last > 0 && clean_old_data_by_date (numdate) == -1)
     return;
@@ -1543,18 +1543,19 @@ process_log (GLogItem *logitem, long long *tps) {
   if (conf.list_agents)
     ins_agent_key_val (logitem, numdate);
 
-  SeanTime(t0);
+//  SeanTime(t0);
   FOREACH_MODULE (idx, module_list) {
     module = module_list[idx];
     if (!(parse = panel_lookup (module)))
       continue;
-    SeanTime(t1);
+//    SeanTime(t1);
     map_log (logitem, parse, module);
-    SeanTime(t2);
-    tps[idx] += (t2 - t1);
+//    SeanTime(t2);
+//    tps[idx] += (t2 - t1);
   }
-  SeanTime(t3);
-  tps[19] += (t3 - t0);
+//  SeanTime(t3);
+//  tps[19] += (t3 - t0);
+  tps[0] += 1;
 
   count_bw (numdate, logitem->resp_size);
   /* don't ignore line but neither count as valid */

@@ -2146,12 +2146,14 @@ read_lines (FILE *fp, GLog *glog, int dry_run) {
     SeanTime(t3);
     t3s += t3 - t2;
   }  // while (!eof)
-  printf("\nchk=%d, jobs=%d:  readline=%lld,  proc=%lld,  parse=%lld,  tps=%lld\n", CHUNK_SIZE, conf.jobs, t1s/1000/1000, t2s/1000/1000, t3s/1000/1000, tps[19]/1000/1000);
+  printf("\nchk=%d, jobs=%d:  readline=%lld,  proc=%lld,  parse=%lld,  tps=%lld\n", conf.chunk_size, conf.jobs, t1s/1000/1000, t2s/1000/1000, t3s/1000/1000, tps[19]/1000/1000);
 
+  /*
   for (int i=0; i<20; i++)
     if (tps[i] * 20 > tps[19])
       printf("[%d] => %lld\n", i, tps[i]/1000/1000);
   printf("\n");
+  */
 
   /* After eof, process last data */
   for (b = 0; b < 2; b++) {
